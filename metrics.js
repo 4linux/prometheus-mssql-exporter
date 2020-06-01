@@ -203,6 +203,84 @@ from sys.dm_os_sys_memory`,
     }
 };
 
+// Collect data from query store SQL 2017
+const mssql_most_exec_query = {
+    metrics: {
+    },
+    query: `SELECT q.query_id, qt.query_text_id, qt.query_sql_text,
+    SUM(rs.count_executions) AS total_execution_count
+FROM sys.query_store_query_text AS qt
+JOIN sys.query_store_query AS q
+    ON qt.query_text_id = q.query_text_id
+JOIN sys.query_store_plan AS p
+    ON q.query_id = p.query_id
+JOIN sys.query_store_runtime_stats AS rs
+    ON p.plan_id = rs.plan_id
+WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE())
+GROUP BY q.query_id, qt.query_text_id, qt.query_sql_text
+ORDER BY total_execution_count DESC`,
+    collect: {
+    }
+};
+	
+const mssql_most_avg_time_query = {
+    metrics: {
+    },
+    query: `SELECT TOP 10 rs.avg_duration, qt.query_sql_text, q.query_id,
+    qt.query_text_id, p.plan_id, GETUTCDATE() AS CurrentUTCTime,
+    rs.last_execution_time
+FROM sys.query_store_query_text AS qt
+JOIN sys.query_store_query AS q
+    ON qt.query_text_id = q.query_text_id
+JOIN sys.query_store_plan AS p
+    ON q.query_id = p.query_id
+JOIN sys.query_store_runtime_stats AS rs
+    ON p.plan_id = rs.plan_id
+WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE())
+ORDER BY rs.avg_duration DESC`,
+    collect: {
+    }
+};
+
+const mssql_most_avg_io_query = {
+    metrics: {
+    },
+    query: `ELECT TOP 10 rs.avg_physical_io_reads, qt.query_sql_text,
+    q.query_id, qt.query_text_id, p.plan_id, rs.runtime_stats_id,
+    rsi.start_time, rsi.end_time, rs.avg_rowcount, rs.count_executions
+FROM sys.query_store_query_text AS qt
+JOIN sys.query_store_query AS q
+    ON qt.query_text_id = q.query_text_id
+JOIN sys.query_store_plan AS p
+    ON q.query_id = p.query_id
+JOIN sys.query_store_runtime_stats AS rs
+    ON p.plan_id = rs.plan_id
+JOIN sys.query_store_runtime_stats_interval AS rsi
+    ON rsi.runtime_stats_interval_id = rs.runtime_stats_interval_id
+WHERE rsi.start_time >= DATEADD(hour, -1, GETUTCDATE())
+ORDER BY rs.avg_physical_io_reads DESC`,
+    collect: {
+    }
+};
+
+const mssql_most_wait_query = {
+    metrics: {
+    },
+    query: `SELECT TOP 10 qt.query_sql_text,
+    qt.query_text_id,
+    q.query_id,
+    p.plan_id,
+    sum(total_query_wait_time_ms) AS sum_total_wait_ms
+FROM sys.query_store_wait_stats ws
+JOIN sys.query_store_plan p ON ws.plan_id = p.plan_id
+JOIN sys.query_store_query q ON p.query_id = q.query_id
+JOIN sys.query_store_query_text qt ON q.query_text_id = qt.query_text_id
+GROUP BY qt.query_sql_text, qt.query_text_id, q.query_id, p.plan_id
+ORDER BY sum_total_wait_ms DESC`,
+    collect: {
+    }
+};
+
 const metrics = [
     mssql_instance_local_time,
     mssql_connections,
