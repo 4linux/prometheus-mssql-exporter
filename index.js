@@ -7,6 +7,8 @@ const client = require('./metrics').client;
 const up = require('./metrics').up;
 const metrics = require('./metrics').metrics;
 
+const queryStoreMetrics = require('./query-store').metrics;
+
 let config = {
     connect: {
         server: process.env["SERVER"],
@@ -68,7 +70,7 @@ async function measure(connection, collector) {
     return new Promise((resolve) => {
         let request = new Request(collector.query, (error, rowCount, rows) => {
             if (!error) {
-                collector.collect(rows, collector.metrics);
+                collector.collect(rows, collector.metrics, config);
                 resolve();
             } else {
                 console.error("Error executing SQL query", collector.query, error);
@@ -93,12 +95,44 @@ async function collect(connection) {
     }
 }
 
+async function queryStoreCollect(connection) {
+    for (let i = 0; i < queryStoreMetrics.length; i++) {
+        await measure(connection, queryStoreMetrics[i]);
+    }
+}
+
+async function collectQueryStoreDB(connection) {
+    return new Promise((resolve) => {
+        let request = new Request("SELECT name FROM sys.databases WHERE name  NOT IN ('master', 'tempdb', 'model', 'msdb')", async function (error, rowCount, rows) {
+            if (!error) {
+             for (row of rows) {
+                     config.connect.options.database=row[0].value;
+		     let dbconnect = await connect();
+		     let dbrequest = new Request("SELECT  desired_state_desc FROM sys.database_query_store_options", async function (DBerror, DBrowCount, DBrows) {
+                         if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
+		             await queryStoreCollect(dbconnect);
+                         }
+                         delete config.connect.options.database;
+			 dbconnect.close();
+		     });
+	             dbconnect.execSql(dbrequest);
+	     }
+	      resolve();
+            } else {
+                console.error("Error executing SQL query", collector.query, error);
+            }   
+        });	
+        connection.execSql(request);
+    });
+}
+
 app.get('/metrics', async (req, res) => {
     res.contentType(client.register.contentType);
 
     try {
         let connection = await connect();
         await collect(connection, metrics);
+	await collectQueryStoreDB(connection);
         connection.close();
         res.send(client.register.metrics());
     } catch (error) {
