@@ -20,7 +20,6 @@ JOIN sys.query_store_plan AS p
     ON q.query_id = p.query_id
 JOIN sys.query_store_runtime_stats AS rs
     ON p.plan_id = rs.plan_id
-WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE())
 GROUP BY q.query_id, qt.query_text_id, qt.query_sql_text
 ORDER BY total_execution_count DESC`,
     collect: function (rows, metrics, config) {
@@ -106,7 +105,7 @@ const mssql_most_wait_query = {
     metrics: {
 	    mssql_sum_total_wait_ms: new client.Gauge({name: 'mssql_sum_total_wait_ms', help: 'Total Wait ms', labelNames: ["database", "query_sql_text", "query_text_id", "query_id"]}),
     },
-    query: `SELECT TOP 10 qt.query_sql_text, qt.query_text_id, q.query_id, p.plan_id, sum(total_query_wait_time_ms) AS sum_total_wait_ms
+    query: `SELECT TOP 100 qt.query_sql_text, qt.query_text_id, q.query_id, p.plan_id, sum(total_query_wait_time_ms) AS sum_total_wait_ms
 FROM sys.query_store_wait_stats ws
 JOIN sys.query_store_plan p ON ws.plan_id = p.plan_id
 JOIN sys.query_store_query q ON p.query_id = q.query_id
