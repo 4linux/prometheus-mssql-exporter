@@ -1,6 +1,6 @@
 /**
  * Collection of metrics and their associated SQL requests
- * Created by Pierre Awaragi
+ * Created by Pierre Awaragi, modified by William Welter and Ricardo Caeiro
  */
 const debug = require("debug")("metrics");
 const client = require('prom-client');

@@ -1,6 +1,6 @@
 /**
  * Collection of metrics and their associated SQL requests
- * Created by Pierre Awaragi
+ * Created by Pierre Awaragi, modified by William Welter and Ricardo Caeiro
  */
 const debug = require("debug")("metrics");
 const client = require('prom-client');
@@ -12,7 +12,7 @@ const mssql_most_exec_query = {
     metrics: {
 	    mssql_total_execution_count: new client.Gauge({name: 'mssql_total_execution_count', help: 'Total Execution Count', labelNames: ["database", "query_id", "query_text_id", "query_sql_text"]}),
     },
-    query: `SELECT q.query_id, qt.query_text_id, qt.query_sql_text, SUM(rs.count_executions) AS total_execution_count
+    query: `SELECT TOP 100 q.query_id, qt.query_text_id, qt.query_sql_text, SUM(rs.count_executions) AS total_execution_count
 FROM sys.query_store_query_text AS qt
 JOIN sys.query_store_query AS q
     ON qt.query_text_id = q.query_text_id
@@ -20,6 +20,7 @@ JOIN sys.query_store_plan AS p
     ON q.query_id = p.query_id
 JOIN sys.query_store_runtime_stats AS rs
     ON p.plan_id = rs.plan_id
+WHERE rs.avg_duration > 10000
 GROUP BY q.query_id, qt.query_text_id, qt.query_sql_text
 ORDER BY total_execution_count DESC`,
     collect: function (rows, metrics, config) {
@@ -30,7 +31,7 @@ ORDER BY total_execution_count DESC`,
 	    const mssql_query_text_id = row[1].value;
 	    const mssql_query_sql_text = row[2].value;
 	    const mssql_total_execution_count = row[3].value;
-	    debug("Most Executed Queries");
+	    debug("Most Executed Queries" - dbname);
 	    metrics.mssql_total_execution_count.set({database: dbname, query_id: mssql_query_id, query_text_id: mssql_query_text_id, query_sql_text: mssql_query_sql_text},mssql_total_execution_count);
        }
     }
@@ -49,7 +50,7 @@ JOIN sys.query_store_plan AS p
     ON q.query_id = p.query_id        
 JOIN sys.query_store_runtime_stats AS rs          
     ON p.plan_id = rs.plan_id              
-WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE())          
+WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE()) and rs.avg_duration > 10000
 GROUP BY q.query_id      
 ORDER BY avg(rs.avg_duration) DESC`,
     collect: function (rows, metrics, config) {
@@ -59,7 +60,7 @@ ORDER BY avg(rs.avg_duration) DESC`,
             const mssql_avg_duration = row[0].value;
             const mssql_query_sql_text = row[1].value;
             const mssql_query_id = row[2].value;
-            debug("Most Average Time Query");
+            debug("Most Average Time Query" - dbname);
             metrics.mssql_avg_duration.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_avg_duration);
 	}
     }
@@ -81,7 +82,7 @@ JOIN sys.query_store_runtime_stats AS rs
     ON p.plan_id = rs.plan_id
 JOIN sys.query_store_runtime_stats_interval AS rsi 
     ON rsi.runtime_stats_interval_id = rs.runtime_stats_interval_id
-WHERE rsi.start_time >= DATEADD(hour, -1, GETUTCDATE())
+WHERE rsi.start_time >= DATEADD(hour, -1, GETUTCDATE()) and rs.avg_duration > 10000
 GROUP BY q.query_id
 ORDER BY avg(rs.avg_physical_io_reads) DESC`,
     collect: function (rows, metrics, config) {
@@ -93,7 +94,7 @@ ORDER BY avg(rs.avg_physical_io_reads) DESC`,
             const mssql_query_id = row[2].value;
             const mssql_avg_rowcount = row[3].value;
             const mssql_count_executions = row[4].value;
-            debug("Most Average IO Query");
+            debug("Most Average IO Query" - dbname);
 	    metrics.mssql_avg_physical_io_reads.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_avg_physical_io_reads);
             metrics.mssql_avg_rowcount.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_avg_rowcount);
             metrics.mssql_count_executions.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_count_executions);
@@ -110,6 +111,9 @@ FROM sys.query_store_wait_stats ws
 JOIN sys.query_store_plan p ON ws.plan_id = p.plan_id
 JOIN sys.query_store_query q ON p.query_id = q.query_id
 JOIN sys.query_store_query_text qt ON q.query_text_id = qt.query_text_id
+JOIN sys.query_store_runtime_stats AS rs    
+    ON p.plan_id = rs.plan_id
+WHERE rs.avg_duration > 10000
 GROUP BY qt.query_sql_text, qt.query_text_id, q.query_id, p.plan_id
 ORDER BY sum_total_wait_ms DESC`,
     collect: function (rows, metrics, config) {
@@ -120,7 +124,7 @@ ORDER BY sum_total_wait_ms DESC`,
 	    const mssql_query_text_id = row[1].value;
 	    const mssql_query_id = row[2].value;
 	    const mssql_sum_total_wait_ms = row[4].value;
-	    debug("Most Wait Query");
+	    debug("Most Wait Query" - dbname);
 	    metrics.mssql_sum_total_wait_ms.set({database: dbname, query_sql_text: mssql_query_sql_text, query_text_id: mssql_query_text_id, query_id: mssql_query_id},mssql_sum_total_wait_ms);
 	}
     }
