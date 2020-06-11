@@ -19,6 +19,12 @@ Prometheus exporter for Microsoft SQL Server (MSSQL). Exposes the following metr
 *  mssql_available_physical_memory_kb Available physical memory in KB
 *  mssql_total_page_file_kb Total page file in KB
 *  mssql_available_page_file_kb Available page file in KB
+*  mssql_total_execution_count Total Query Execution Count (WHERE Average durantion > 10ms)
+*  mssql_avg_duration_us Average Query Duration in micro seconds (WHERE Average durantion > 10ms)
+*  mssql_avg_physical_io_reads Average Physical IO Reads (WHERE Average durantion > 10ms)
+*  mssql_avg_rowcount Average Row Count per Query (WHERE Average durantion > 10ms)
+*  mssql_count_executions Cont Executions (WHERE Average durantion > 10ms)
+*  mssql_sum_total_wait_ms Total Wait Query in ms (WHERE Average durantion > 10ms)
 
 Please feel free to submit other interesting metrics to include.
 
@@ -26,6 +32,7 @@ Usage
 -----
 
 `docker run -e SERVER=192.168.56.101 -e USERNAME=SA -e PASSWORD=qkD4x3yy -e DEBUG=app -p 4000:4000 --name prometheus-mssql-exporter awaragi/prometheus-mssql-exporter` (Original - Without Query Store)
+
 `docker run -e SERVER=192.168.56.101 -e USERNAME=SA -e PASSWORD=qkD4x3yy -e DEBUG=app -p 4000:4000 --name prometheus-mssql-exporter caeiro/prometheus-mssql-exporter` (With Query Store)
 
 The image supports the following environments and exposes port 4000
