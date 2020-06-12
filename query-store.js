@@ -31,7 +31,7 @@ ORDER BY total_execution_count DESC`,
 	    const mssql_query_text_id = row[1].value;
 	    const mssql_query_sql_text = row[2].value;
 	    const mssql_total_execution_count = row[3].value;
-	    debug("Most Executed Queries" - dbname);
+	    debug("Most Executed Queries -", dbname);
 	    metrics.mssql_total_execution_count.set({database: dbname, query_id: mssql_query_id, query_text_id: mssql_query_text_id, query_sql_text: mssql_query_sql_text},mssql_total_execution_count);
        }
     }
@@ -60,7 +60,7 @@ ORDER BY avg(rs.avg_duration) DESC`,
             const mssql_avg_duration = row[0].value;
             const mssql_query_sql_text = row[1].value;
             const mssql_query_id = row[2].value;
-            debug("Most Average Time Query" - dbname);
+            debug("Most Average Time Query -", dbname);
             metrics.mssql_avg_duration.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_avg_duration);
 	}
     }
@@ -94,7 +94,7 @@ ORDER BY avg(rs.avg_physical_io_reads) DESC`,
             const mssql_query_id = row[2].value;
             const mssql_avg_rowcount = row[3].value;
             const mssql_count_executions = row[4].value;
-            debug("Most Average IO Query" - dbname);
+            debug("Most Average IO Query -", dbname);
 	    metrics.mssql_avg_physical_io_reads.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_avg_physical_io_reads);
             metrics.mssql_avg_rowcount.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_avg_rowcount);
             metrics.mssql_count_executions.set({database: dbname, query_sql_text: mssql_query_sql_text, query_id: mssql_query_id},mssql_count_executions);
@@ -124,7 +124,7 @@ ORDER BY sum_total_wait_ms DESC`,
 	    const mssql_query_text_id = row[1].value;
 	    const mssql_query_id = row[2].value;
 	    const mssql_sum_total_wait_ms = row[4].value;
-	    debug("Most Wait Query" - dbname);
+	    debug("Most Wait Query -", dbname);
 	    metrics.mssql_sum_total_wait_ms.set({database: dbname, query_sql_text: mssql_query_sql_text, query_text_id: mssql_query_text_id, query_id: mssql_query_id},mssql_sum_total_wait_ms);
 	}
     }
