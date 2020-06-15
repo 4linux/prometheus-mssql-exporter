@@ -101,6 +101,13 @@ async function queryStoreCollect(connection) {
     }
 }
 
+async function syncExecSQL(dbrequest) {
+    return new Promise((resolve) => {
+        connection.execSql(dbrequest);
+	
+    });
+}
+
 async function collectQueryStoreDB(connection) {
     return new Promise((resolve) => {
         let request = new Request("SELECT name FROM sys.databases WHERE name  NOT IN ('master', 'tempdb', 'model', 'msdb')", async function (error, rowCount, rows) {
@@ -112,10 +119,13 @@ async function collectQueryStoreDB(connection) {
                          if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
 		             await queryStoreCollect(dbconnect);
                          }
+			 
                          delete config.connect.options.database;
 			 dbconnect.close();
+			 resolve();
 		     });
-	             dbconnect.execSql(dbrequest);
+		     
+	             await syncExecSQL(dbrequest);
 	     }
 	      resolve();
             } else {
