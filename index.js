@@ -51,9 +51,9 @@ async function connect() {
                 resolve(connection);
             }
         });
-        connection.on('end', () => {
-            debug("Connection to database ended");
-        });
+        //connection.on('end', () => {
+        //    debug("Connection to database ended");
+        //});
     });
 
 }
@@ -96,15 +96,39 @@ async function collect(connection) {
 }
 
 async function queryStoreCollect(connection) {
+    console.error("Acionando a função storeCollect")
     for (let i = 0; i < queryStoreMetrics.length; i++) {
         await measure(connection, queryStoreMetrics[i]);
     }
 }
 
-async function syncExecSQL(dbconnect,dbrequest) {
+async function syncExecSQL(dbconnect) {
     return new Promise((resolve) => {
-        dbconnect.execSql(dbrequest);
-	
+	     let dbrequest = new Request("SELECT  desired_state_desc FROM sys.database_query_store_options", async function (DBerror, DBrowCount, DBrows) {
+		 console.error("Resultados Prontos - " + config.connect.options.database);
+                 if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
+	             await queryStoreCollect(dbconnect);
+                 } else {
+	            console.error("Connection Error - " + config.connect.options.database);
+		 }
+                 console.error("Desconectando da base - " + config.connect.options.database);
+		 await dbDisconnect(dbconnect);
+		 console.error("Desconectado da base - " + config.connect.options.database);
+		 delete config.connect.options.database;
+		 resolve();
+	     });
+            dbconnect.execSql(dbrequest);
+    });
+}
+
+async function dbDisconnect(dbconnect) {
+    return new Promise((resolve) => {
+       	dbconnect.on('end', function () {
+		console.error("END")
+		resolve()
+	})
+        dbconnect.close();
+	console.error("Passou do close")
     });
 }
 
@@ -112,22 +136,14 @@ async function collectQueryStoreDB(connection) {
     return new Promise((resolve) => {
         let request = new Request("SELECT name FROM sys.databases WHERE name  NOT IN ('master', 'tempdb', 'model', 'msdb')", async function (error, rowCount, rows) {
             if (!error) {
+	     await dbDisconnect(connection);
              for (row of rows) {
                      config.connect.options.database=row[0].value;
 		     let dbconnect = await connect();
-		     let dbrequest = new Request("SELECT  desired_state_desc FROM sys.database_query_store_options", async function (DBerror, DBrowCount, DBrows) {
-                         if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
-		             await queryStoreCollect(dbconnect);
-                         }
-			 
-                         delete config.connect.options.database;
-			 dbconnect.close();
-			 resolve();
-		     });
-		     
-	             await syncExecSQL(dbconnect,dbrequest);
+		     console.error("Conectado na base - " + config.connect.options.database)
+	             await syncExecSQL(dbconnect);
 	     }
-	      resolve();
+	     resolve();
             } else {
                 console.error("Error executing SQL query", collector.query, error);
             }   
@@ -142,8 +158,9 @@ app.get('/metrics', async (req, res) => {
     try {
         let connection = await connect();
         await collect(connection, metrics);
+	await dbDisconnect(connection);
+	connection = await connect();
 	await collectQueryStoreDB(connection);
-        connection.close();
         res.send(client.register.metrics());
     } catch (error) {
         // error connecting
