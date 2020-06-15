@@ -101,7 +101,7 @@ async function queryStoreCollect(connection) {
     }
 }
 
-async function syncExecSQL(dbrequest) {
+async function syncExecSQL(dbconnect,dbrequest) {
     return new Promise((resolve) => {
         connection.execSql(dbrequest);
 	
@@ -125,7 +125,7 @@ async function collectQueryStoreDB(connection) {
 			 resolve();
 		     });
 		     
-	             await syncExecSQL(dbrequest);
+	             await syncExecSQL(dbconnect,dbrequest);
 	     }
 	      resolve();
             } else {
