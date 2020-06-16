@@ -106,8 +106,6 @@ async function syncExecSQL(dbconnect) {
 	     let dbrequest = new Request("SELECT  desired_state_desc FROM sys.database_query_store_options", async function (DBerror, DBrowCount, DBrows) {
                  if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
 	             await queryStoreCollect(dbconnect);
-                 } else {
-	            console.error("Connection Error - " + config.connect.options.database);
 		 }
 		 await dbDisconnect(dbconnect);
 		 delete config.connect.options.database;
