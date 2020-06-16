@@ -96,7 +96,6 @@ async function collect(connection) {
 }
 
 async function queryStoreCollect(connection) {
-    console.error("Acionando a função storeCollect")
     for (let i = 0; i < queryStoreMetrics.length; i++) {
         await measure(connection, queryStoreMetrics[i]);
     }
@@ -105,15 +104,12 @@ async function queryStoreCollect(connection) {
 async function syncExecSQL(dbconnect) {
     return new Promise((resolve) => {
 	     let dbrequest = new Request("SELECT  desired_state_desc FROM sys.database_query_store_options", async function (DBerror, DBrowCount, DBrows) {
-		 console.error("Resultados Prontos - " + config.connect.options.database);
                  if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
 	             await queryStoreCollect(dbconnect);
                  } else {
 	            console.error("Connection Error - " + config.connect.options.database);
 		 }
-                 console.error("Desconectando da base - " + config.connect.options.database);
 		 await dbDisconnect(dbconnect);
-		 console.error("Desconectado da base - " + config.connect.options.database);
 		 delete config.connect.options.database;
 		 resolve();
 	     });
@@ -124,11 +120,9 @@ async function syncExecSQL(dbconnect) {
 async function dbDisconnect(dbconnect) {
     return new Promise((resolve) => {
        	dbconnect.on('end', function () {
-		console.error("END")
 		resolve()
 	})
         dbconnect.close();
-	console.error("Passou do close")
     });
 }
 
@@ -140,7 +134,6 @@ async function collectQueryStoreDB(connection) {
              for (row of rows) {
                      config.connect.options.database=row[0].value;
 		     let dbconnect = await connect();
-		     console.error("Conectado na base - " + config.connect.options.database)
 	             await syncExecSQL(dbconnect);
 	     }
 	     resolve();
