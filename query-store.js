@@ -16,7 +16,7 @@ JOIN sys.query_store_plan AS p
     ON q.query_id = p.query_id
 JOIN sys.query_store_runtime_stats AS rs
     ON p.plan_id = rs.plan_id
-WHERE rs.avg_duration > 100000
+WHERE rs.avg_duration > 1000000
 GROUP BY q.query_id, qt.query_text_id, qt.query_sql_text
 ORDER BY total_execution_count DESC`,
     collect: function (rows, metrics, config) {
@@ -46,7 +46,7 @@ JOIN sys.query_store_plan AS p
     ON q.query_id = p.query_id        
 JOIN sys.query_store_runtime_stats AS rs          
     ON p.plan_id = rs.plan_id              
-WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE()) and rs.avg_duration > 10000
+WHERE rs.last_execution_time > DATEADD(hour, -1, GETUTCDATE()) and rs.avg_duration > 1000000
 GROUP BY q.query_id      
 ORDER BY avg(rs.avg_duration) DESC`,
     collect: function (rows, metrics, config) {
@@ -78,7 +78,7 @@ JOIN sys.query_store_runtime_stats AS rs
     ON p.plan_id = rs.plan_id
 JOIN sys.query_store_runtime_stats_interval AS rsi 
     ON rsi.runtime_stats_interval_id = rs.runtime_stats_interval_id
-WHERE rsi.start_time >= DATEADD(hour, -1, GETUTCDATE()) and rs.avg_duration > 10000
+WHERE rsi.start_time >= DATEADD(hour, -1, GETUTCDATE()) and rs.avg_duration > 1000000
 GROUP BY q.query_id
 ORDER BY avg(rs.avg_physical_io_reads) DESC`,
     collect: function (rows, metrics, config) {

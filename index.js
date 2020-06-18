@@ -18,7 +18,7 @@ let config = {
             port: process.env["PORT"] || 1433,
             encrypt: true,
             rowCollectionOnRequestCompletion: true,
-	    requestTimeout: 30000
+	    requestTimeout: 50000
         }
     },
     port: process.env["EXPOSE"] || 4000
