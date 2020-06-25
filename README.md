@@ -25,6 +25,11 @@ Prometheus exporter for Microsoft SQL Server (MSSQL). Exposes the following metr
 *  mssql_avg_rowcount Average Row Count per Query (WHERE Average durantion > 10ms)
 *  mssql_count_executions Cont Executions (WHERE Average durantion > 10ms)
 *  mssql_sum_total_wait_ms Total Wait Query in ms (WHERE Average durantion > 10ms)
+*  mssql_missing_index_suggestion
+
+
+Metrics exposed on metrics-slow endpoint:
+* mssql_object_fragmentation_percent
 
 Please feel free to submit other interesting metrics to include.
 
@@ -76,3 +81,18 @@ for example:
 `docker run -e ACCEPT_EULA=Y -e SA_PASSWORD=qkD4x3yy -p 1433:1433 --name mssql -d microsoft/mssql-server-linux`
 
 To use a persistent storage include `-v /mypath:/var/opt/mssql/data`
+
+
+### Test environment
+
+Build image:
+`docker-compose build`
+
+Up:
+`docker-compose up`
+
+If need connect to the database:
+
+`docker exec -it CONTAINER_ID_OR_NAME  "bash"`
+
+`/opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P`

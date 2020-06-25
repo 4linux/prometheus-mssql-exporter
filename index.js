@@ -8,6 +8,8 @@ const up = require('./metrics').up;
 const metrics = require('./metrics').metrics;
 
 const queryStoreMetrics = require('./query-store').metrics;
+const databaseMetrics = require('./database-metrics').metrics;
+const databaseMetricsSlow = require('./database-metrics-slow').metrics;
 
 let config = {
     connect: {
@@ -102,15 +104,41 @@ async function queryStoreCollect(connection) {
     }
 }
 
-async function syncExecSQL(dbconnect) {
+
+async function databaseCollect(connection){
+    for (let i = 0; i < databaseMetrics.length; i++) {
+        await measure(connection, databaseMetrics[i]);
+    }
+}
+
+/*
+Function that collect metrics based on complex and slow queries and should be scraped on larger intervals
+ */
+async function databaseSlowCollect(connection){
+    for (let i = 0; i < databaseMetricsSlow.length; i++) {
+        await measure(connection, databaseMetricsSlow[i]);
+    }
+}
+
+async function syncExecSQL(dbconnect,slow=false) {
     return new Promise((resolve) => {
 	     let dbrequest = new Request("SELECT  desired_state_desc FROM sys.database_query_store_options", async function (DBerror, DBrowCount, DBrows) {
-                 if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF") {
-	             await queryStoreCollect(dbconnect);
-		 }
-		 await dbDisconnect(dbconnect);
-		 delete config.connect.options.database;
-		 resolve();
+            if (!DBerror && DBrowCount > 0 && DBrows[0][0].value != "OFF" && slow!=true) {
+                //If Query Store is enabled collect some metrics
+                await queryStoreCollect(dbconnect);
+            }
+
+            if(slow!=true){
+                //Collect database specific metrics
+                await databaseCollect(dbconnect);
+            }else{
+                await databaseSlowCollect(dbconnect);
+            }
+
+
+		    await dbDisconnect(dbconnect);
+		    delete config.connect.options.database;
+		    resolve();
 	     });
             dbconnect.execSql(dbrequest);
     });
@@ -125,15 +153,16 @@ async function dbDisconnect(dbconnect) {
     });
 }
 
-async function collectQueryStoreDB(connection) {
+async function collectDBMetrics(connection,slow=false) {
     return new Promise((resolve) => {
         let request = new Request("SELECT name FROM sys.databases WHERE name  NOT IN ('master', 'tempdb', 'model', 'msdb')", async function (error, rowCount, rows) {
             if (!error) {
 	     await dbDisconnect(connection);
              for (row of rows) {
-                     config.connect.options.database=row[0].value;
-		     let dbconnect = await connect();
-	             await syncExecSQL(dbconnect);
+                    config.connect.options.database=row[0].value;
+                    let dbconnect = await connect();
+                    console.error("Conectado a ",config.connect.options.database );
+	                await syncExecSQL(dbconnect,slow);
 	     }
 	     resolve();
             } else {
@@ -144,15 +173,43 @@ async function collectQueryStoreDB(connection) {
     });
 }
 
+
+
+
 app.get('/metrics', async (req, res) => {
     res.contentType(client.register.contentType);
 
     try {
         let connection = await connect();
         await collect(connection, metrics);
-	await dbDisconnect(connection);
-	connection = await connect();
-	await collectQueryStoreDB(connection);
+	    await dbDisconnect(connection);
+        
+        connection = await connect();
+        await collectDBMetrics(connection);
+        
+
+
+        res.send(client.register.metrics());
+    } catch (error) {
+        // error connecting
+        up.set(0);
+        res.header("X-Error", error.message || error);
+        res.send(client.register.getSingleMetricAsString(up.name));
+    }
+});
+
+
+app.get('/metrics-slow', async (req, res) => {
+    res.contentType(client.register.contentType);
+
+    try {
+        
+        
+        connection = await connect();
+        await collectDBMetrics(connection,true);
+        
+
+
         res.send(client.register.metrics());
     } catch (error) {
         // error connecting

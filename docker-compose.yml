@@ -1,0 +1,32 @@
+version: "3"
+
+networks:
+  webnet:
+    driver: overlay
+
+volumes:
+  pgdata-vol:
+  solr-vol:
+  file_cache-vol:
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-CU5-ubuntu-18.04
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: Teste!23456789
+    #name: sqlserver
+
+    
+  prometheus-mssql-exporter:
+    image: 4linux/prometheus-mssql-exporter
+    build:
+     dockerfile: Dockerfile
+     context: .
+    ports:
+     - "4000:4000"
+    environment:
+     SERVER: sqlserver
+     USERNAME: sa
+     PASSWORD: Teste!23456789
+     DEBUG: metrics,app
