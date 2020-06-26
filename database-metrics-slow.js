@@ -1,12 +1,14 @@
 const debug = require("debug")("metrics");
 const client = require('prom-client');
 
+const registry = new client.Registry();
+
 // Query based metrics
 // -------------------
-// Collect metrics based on queries that are too slow for short scrap interval
+// Collect metrics based on queries that are too slow for short scrape interval
 const mssql_object_fragmentation = {
     metrics: {
-	    mssql_object_fragmentation_percent: new client.Gauge({name: 'mssql_object_fragmentation_percent', help: 'Show percent object fragmentation', labelNames: ["DatabaseName", "ObjectID", "TableName", "IndexName"]}),
+	    mssql_object_fragmentation_percent: new client.Gauge({name: 'mssql_object_fragmentation_percent', help: 'Show percent object fragmentation', labelNames: ["DatabaseName", "ObjectID", "TableName", "IndexName"], registers: [registry]}),
     },
     query: `SELECT 
     OBJECT_NAME(ps.object_id) AS TableName 
@@ -47,6 +49,7 @@ const metrics = [
 module.exports = {
     client: client,
     metrics: metrics,
+    registerSlow : registry
 };
 
 // DOCUMENTATION of queries and their associated metrics (targeted to DBAs)

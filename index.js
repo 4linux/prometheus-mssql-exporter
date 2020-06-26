@@ -9,9 +9,13 @@ const metrics = require('./metrics').metrics;
 
 const queryStoreMetrics = require('./query-store').metrics;
 const databaseMetrics = require('./database-metrics').metrics;
+
+const clientSlow = require('./database-metrics-slow').client;
 const databaseMetricsSlow = require('./database-metrics-slow').metrics;
 
-let config = {
+const registerSlow = require('./database-metrics-slow').registerSlow;
+
+let config = {      
     connect: {
         server: process.env["SERVER"],
         userName: process.env["USERNAME"],
@@ -160,9 +164,15 @@ async function collectDBMetrics(connection,slow=false) {
 	     await dbDisconnect(connection);
              for (row of rows) {
                     config.connect.options.database=row[0].value;
-                    let dbconnect = await connect();
-                    console.error("Conectado a ",config.connect.options.database );
-	                await syncExecSQL(dbconnect,slow);
+                    try{
+                        let dbconnect = await connect();
+                        console.error("Conectado a ",config.connect.options.database );
+	                    await syncExecSQL(dbconnect,slow);
+                    }catch(error){
+                        console.error("Unable to connect to: ",config.connect.options.database );
+                        delete config.connect.options.database;
+                    }
+                    
 	     }
 	     resolve();
             } else {
@@ -200,22 +210,19 @@ app.get('/metrics', async (req, res) => {
 
 
 app.get('/metrics-slow', async (req, res) => {
-    res.contentType(client.register.contentType);
+    res.contentType(clientSlow.register.contentType);
 
     try {
-        
         
         connection = await connect();
         await collectDBMetrics(connection,true);
         
-
-
-        res.send(client.register.metrics());
+        res.send(registerSlow.metrics());
     } catch (error) {
         // error connecting
         up.set(0);
         res.header("X-Error", error.message || error);
-        res.send(client.register.getSingleMetricAsString(up.name));
+        res.send(cregisterSlow.getSingleMetricAsString(up.name));
     }
 });
 
