@@ -3,6 +3,9 @@ const client = require('prom-client');
 
 const registry = new client.Registry();
 
+// UP metric
+const up = new client.Gauge({name: 'up', help: "UP Status", registers: [registry]});
+
 // Query based metrics
 // -------------------
 // Collect metrics based on queries that are too slow for short scrape interval
@@ -49,7 +52,8 @@ const metrics = [
 module.exports = {
     client: client,
     metrics: metrics,
-    registerSlow : registry
+    registerSlow : registry,
+    up:up
 };
 
 // DOCUMENTATION of queries and their associated metrics (targeted to DBAs)

@@ -12,6 +12,7 @@ const databaseMetrics = require('./database-metrics').metrics;
 
 const clientSlow = require('./database-metrics-slow').client;
 const databaseMetricsSlow = require('./database-metrics-slow').metrics;
+const upSlow = require('./database-metrics-slow').up;
 
 const registerSlow = require('./database-metrics-slow').registerSlow;
 
@@ -214,6 +215,7 @@ app.get('/metrics-slow', async (req, res) => {
 
     try {
         
+        upSlow.set(1);
         connection = await connect();
         await collectDBMetrics(connection,true);
         
